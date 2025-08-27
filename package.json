@@ -23,6 +23,7 @@
     "test": "jest --passWithNoTests",
     "dev": "ts-node-dev src/index.ts",
     "build": "tsc",
-    "start": "node dist/index.js"
+    "start": "node dist/index.js",
+    "docker-build": "yarn build && docker build -t my-service ."
   }
 }

@@ -57,7 +57,12 @@ jobs:
       - name: Configure Docker to use gcloud
         run: gcloud auth configure-docker --quiet
 
-      # 依存導入/ビルドは Dockerfile の中で実施
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Build TypeScript
+        run: yarn build
+
       - name: Build Docker image
         run: docker build -t "${IMAGE_SHA}" .
 
