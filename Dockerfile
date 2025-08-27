@@ -1,21 +1,38 @@
-# Node.js 18 の公式イメージを使用
-FROM node:18
+FROM node:20-alpine
 
-# 作業ディレクトリを作成
-WORKDIR /usr/src/app
+WORKDIR /app
 
-# 依存関係をコピーしてインストール
+# パッケージファイルをコピー
 COPY package*.json yarn.lock ./
-RUN yarn install --production=false
 
-# ソースコードをコピー
+
+# 依存関係をインストール（devDependencies含む）
+RUN yarn install --frozen-lockfile
+
+
+# アプリケーションコードをコピー
 COPY . .
 
-# TypeScript をビルド（→ dist/ に出力）
+# TypeScriptをビルド
 RUN yarn build
 
-# 本番環境では devDependencies を削除（容量削減）
-RUN yarn install --production --ignore-scripts --prefer-offline
+# 本番依存だけ残す
+RUN yarn install --frozen-lockfile --production --ignore-scripts --prefer-offline && yarn cache clean;
 
-# アプリを起動
-CMD ["yarn", "start"]
+# 非rootユーザーを作成
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# ファイルの所有権を変更
+RUN chown -R nodejs:nodejs /app
+USER nodejs
+
+# ポートを公開
+EXPOSE 3000
+
+# ヘルスチェック
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+
+# アプリケーションを起動
+CMD ["node", "dist/index.js"]
