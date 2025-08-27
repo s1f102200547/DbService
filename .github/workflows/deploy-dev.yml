@@ -38,7 +38,6 @@ jobs:
       SERVICE_NAME: db-service-dev
       IMAGE_SHA: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/db-service-dev/db-service:${{ github.sha }}
 
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -53,8 +52,8 @@ jobs:
         with:
           project_id: ${{ env.PROJECT_ID }}
 
-      - name: Configure Docker to use gcloud
-        run: gcloud auth configure-docker --quiet
+      - name: Configure Docker for Artifact Registry
+        run: gcloud auth configure-docker asia-northeast1-docker.pkg.dev --quiet
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile
