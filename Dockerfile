@@ -14,9 +14,6 @@ RUN yarn build
 FROM node:20-alpine AS runtime
 WORKDIR /app
 
-# ヘルスチェック用
-RUN apk add --no-cache curl
-
 # 本番依存のみインストール（軽量化）
 COPY package*.json yarn.lock ./
 RUN yarn install --frozen-lockfile --production --ignore-scripts --prefer-offline && yarn cache clean
@@ -33,10 +30,6 @@ USER nodejs
 
 # ポート
 EXPOSE 3000
-
-# ヘルスチェック（/health を実装しておく）
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD curl -f http://localhost:3000/health || exit 1
 
 # アプリ起動
 CMD ["node", "dist/index.js"]
