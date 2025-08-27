@@ -24,6 +24,7 @@
     "dev": "ts-node-dev src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
-    "docker-build": "yarn build && docker build -t my-service ."
+    "docker-build": "yarn build && docker build -t my-service .",
+    "docker-run": "docker run -p 8080:8080 my-service"
   }
 }
