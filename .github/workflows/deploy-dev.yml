@@ -6,10 +6,6 @@ on:
   pull_request:
     branches: [ development ]
 
-concurrency:
-  group: cloud-run-dev-${{ github.ref }}
-  cancel-in-progress: true
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -41,7 +37,6 @@ jobs:
       REGION: asia-northeast1
       SERVICE_NAME: db-service-dev
       IMAGE_SHA: gcr.io/${{ secrets.GCP_PROJECT_ID_DEV }}/db-service-dev:${{ github.sha }}
-      IMAGE_LATEST: gcr.io/${{ secrets.GCP_PROJECT_ID_DEV }}/db-service-dev:latest
 
     steps:
       - name: Checkout code
@@ -60,16 +55,12 @@ jobs:
       - name: Configure Docker to use gcloud
         run: gcloud auth configure-docker --quiet
 
-      # 依存導入/ビルドは Dockerfile の中で実施（ここで yarn build はしない）
+      # 依存導入/ビルドは Dockerfile の中で実施
       - name: Build Docker image
-        run: |
-          docker build -t "${IMAGE_SHA}" .
-          docker tag "${IMAGE_SHA}" "${IMAGE_LATEST}"
+        run: docker build -t "${IMAGE_SHA}" .
 
       - name: Push Docker image
-        run: |
-          docker push "${IMAGE_SHA}"
-          docker push "${IMAGE_LATEST}"
+        run: docker push "${IMAGE_SHA}"
 
       - name: Deploy to Cloud Run
         run: |
