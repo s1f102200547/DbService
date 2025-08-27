@@ -2,40 +2,86 @@ name: Deploy to Cloud Run (Dev)
 
 on:
   push:
-    branches:
-      - development   # development ブランチに push されたらデプロイ
+    branches: [ development ]
+  pull_request:
+    branches: [ development ]
+
+concurrency:
+  group: cloud-run-dev-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 20.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20.x
+          cache: 'yarn'
+
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile
+
+      - name: Run tests
+        run: yarn test
+        env:
+          CI: true
+
   deploy:
+    needs: test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
 
+    env:
+      PROJECT_ID: ${{ secrets.GCP_PROJECT_ID_DEV }}
+      REGION: asia-northeast1
+      SERVICE_NAME: db-service-dev
+      IMAGE_SHA: gcr.io/${{ secrets.GCP_PROJECT_ID_DEV }}/db-service-dev:${{ github.sha }}
+      IMAGE_LATEST: gcr.io/${{ secrets.GCP_PROJECT_ID_DEV }}/db-service-dev:latest
+
     steps:
-    # ソースコードを取得
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # GCP 認証（GitHub Secrets に登録した JSON キーを使用）
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v1
-      with:
-        credentials_json: ${{ secrets.GCP_CREDENTIALS_DEV }}
+      # Authenticate to Google Cloud using a Service Account JSON in repo secrets
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          credentials_json: ${{ secrets.GCP_CREDENTIALS_DEV }}
 
-    # gcloud CLI をセットアップ
-    - name: Set up Cloud SDK
-      uses: google-github-actions/setup-gcloud@v1
-      with:
-        project_id: ryokan-system-dev-470301
+      - name: Setup Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v2
+        with:
+          project_id: ${{ env.PROJECT_ID }}
 
-    # Dockerfile を使ってビルド & Artifact Registry/GCR に push
-    - name: Build and Push Docker image
-      run: |
-        gcloud builds submit --tag gcr.io/ryokan-system-dev-470301/db-service-dev
+      - name: Configure Docker to use gcloud
+        run: gcloud auth configure-docker --quiet
 
-    # Cloud Run にデプロイ
-    - name: Deploy to Cloud Run
-      run: |
-        gcloud run deploy db-service-dev \
-          --image gcr.io/ryokan-system-dev-470301/db-service-dev \
-          --region asia-northeast1 \
-          --platform managed \
-          --allow-unauthenticated
+      - name: Build Docker image
+        run: |
+          docker build -t "${IMAGE_SHA}" .
+          docker tag "${IMAGE_SHA}" "${IMAGE_LATEST}"
+
+      - name: Push Docker image
+        run: |
+          docker push "${IMAGE_SHA}"
+          docker push "${IMAGE_LATEST}"
+
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run deploy "${SERVICE_NAME}" \
+            --image "${IMAGE_SHA}" \
+            --platform managed \
+            --region "${REGION}" \
+            --allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 5
+          # 環境変数や Secret を設定したい場合は以下を追記:
+          #  --set-env-vars KEY=VALUE,KEY2=VALUE2 \
+          #  --set-secrets NOTIFICATION_API_KEY=notification-api-key:latest
