@@ -47,7 +47,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # Authenticate to Google Cloud using a Service Account JSON in repo secrets
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v2
         with:
@@ -61,9 +60,7 @@ jobs:
       - name: Configure Docker to use gcloud
         run: gcloud auth configure-docker --quiet
 
-      - name: Build (TypeScript compile)
-        run: yarn build
-
+      # 依存導入/ビルドは Dockerfile の中で実施（ここで yarn build はしない）
       - name: Build Docker image
         run: |
           docker build -t "${IMAGE_SHA}" .
@@ -85,6 +82,6 @@ jobs:
             --cpu 1 \
             --min-instances 0 \
             --max-instances 5
-          # 環境変数や Secret を設定したい場合は以下を追記:
+          # 環境変数/Secret を設定する場合は以下を追記:
           #  --set-env-vars KEY=VALUE,KEY2=VALUE2 \
           #  --set-secrets NOTIFICATION_API_KEY=notification-api-key:latest

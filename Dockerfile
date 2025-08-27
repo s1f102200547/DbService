@@ -1,38 +1,42 @@
-FROM node:20-alpine
-
+# ====== Build stage ======
+FROM node:20-alpine AS builder
 WORKDIR /app
 
-# パッケージファイルをコピー
+# 依存解決のために先にマニフェストだけコピー
 COPY package*.json yarn.lock ./
-
-
-# 依存関係をインストール（devDependencies含む）
 RUN yarn install --frozen-lockfile
 
-
-# アプリケーションコードをコピー
+# ソースをコピーして TypeScript ビルド
 COPY . .
-
-# TypeScriptをビルド
 RUN yarn build
 
-# 本番依存だけ残す
-RUN yarn install --frozen-lockfile --production --ignore-scripts --prefer-offline && yarn cache clean;
+# ====== Runtime stage ======
+FROM node:20-alpine AS runtime
+WORKDIR /app
 
-# 非rootユーザーを作成
-RUN addgroup -g 1001 -S nodejs && \
-    adduser -S nodejs -u 1001
+# ヘルスチェック用
+RUN apk add --no-cache curl
 
-# ファイルの所有権を変更
-RUN chown -R nodejs:nodejs /app
+# 本番依存のみインストール（軽量化）
+COPY package*.json yarn.lock ./
+RUN yarn install --frozen-lockfile --production --ignore-scripts --prefer-offline && yarn cache clean
+
+# ビルド成果物のみコピー
+COPY --from=builder /app/dist ./dist
+
+# 必要に応じて静的アセット等があれば追加でコピー
+# COPY --from=builder /app/public ./public
+
+# 非rootユーザーで実行
+RUN addgroup -g 1001 -S nodejs && adduser -S nodejs -u 1001
 USER nodejs
 
-# ポートを公開
+# ポート
 EXPOSE 3000
 
-# ヘルスチェック
+# ヘルスチェック（/health を実装しておく）
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider http://localhost:3000/health || exit 1
+  CMD curl -f http://localhost:3000/health || exit 1
 
-# アプリケーションを起動
+# アプリ起動
 CMD ["node", "dist/index.js"]
