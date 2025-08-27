@@ -1,0 +1,41 @@
+name: Deploy to Cloud Run (Dev)
+
+on:
+  push:
+    branches:
+      - development   # development ブランチに push されたらデプロイ
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    # ソースコードを取得
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    # GCP 認証（GitHub Secrets に登録した JSON キーを使用）
+    - name: Authenticate to Google Cloud
+      uses: google-github-actions/auth@v1
+      with:
+        credentials_json: ${{ secrets.GCP_CREDENTIALS_DEV }}
+
+    # gcloud CLI をセットアップ
+    - name: Set up Cloud SDK
+      uses: google-github-actions/setup-gcloud@v1
+      with:
+        project_id: ryokan-system-dev-470301
+
+    # Dockerfile を使ってビルド & Artifact Registry/GCR に push
+    - name: Build and Push Docker image
+      run: |
+        gcloud builds submit --tag gcr.io/ryokan-system-dev-470301/db-service-dev
+
+    # Cloud Run にデプロイ
+    - name: Deploy to Cloud Run
+      run: |
+        gcloud run deploy db-service-dev \
+          --image gcr.io/ryokan-system-dev-470301/db-service-dev \
+          --region asia-northeast1 \
+          --platform managed \
+          --allow-unauthenticated
