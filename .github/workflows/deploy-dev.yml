@@ -131,6 +131,7 @@ jobs:
             --image "${IMAGE_SHA}" \
             --platform managed \
             --region "${REGION}" \
+            --ingress internal \
             --memory 512Mi \
             --cpu 1 \
             --min-instances 0 \
