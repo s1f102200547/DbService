@@ -42,6 +42,7 @@ jobs:
       REGION: asia-northeast1
       SERVICE_NAME: db-service-dev
       IMAGE_SHA: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_DEV }}/db-service-dev/db-service:${{ github.sha }}
+      RUN_SERVICE_ACCOUNT: ${{ secrets.GCP_RUN_SERVICE_ACCOUNT_DEV }}
 
     steps:
       - name: Checkout code
@@ -78,6 +79,7 @@ jobs:
             --image "${IMAGE_SHA}" \
             --platform managed \
             --region "${REGION}" \
+            --service-account="${RUN_SERVICE_ACCOUNT}" \
             --allow-unauthenticated \
             --memory 512Mi \
             --cpu 1 \
@@ -95,6 +97,7 @@ jobs:
       REGION: asia-northeast1
       SERVICE_NAME: db-service-prod
       IMAGE_SHA: asia-northeast1-docker.pkg.dev/${{ secrets.GCP_PROJECT_ID_PROD }}/db-service-prod/db-service:${{ github.sha }}
+      RUN_SERVICE_ACCOUNT: ${{ secrets.GCP_RUN_SERVICE_ACCOUNT_PROD }}
 
     steps:
       - name: Checkout code
@@ -131,6 +134,7 @@ jobs:
             --image "${IMAGE_SHA}" \
             --platform managed \
             --region "${REGION}" \
+            --service-account="${RUN_SERVICE_ACCOUNT}" \
             --ingress internal \
             --memory 512Mi \
             --cpu 1 \
