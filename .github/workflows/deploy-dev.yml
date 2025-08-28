@@ -2,9 +2,9 @@ name: Deploy to Cloud Run (Dev)
 
 on:
   push:
-    branches: [ development ]
+    branches: [ "*" ]
   pull_request:
-    branches: [ development ]
+    branches: [ "*" ]
 
 jobs:
   test:
