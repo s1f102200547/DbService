@@ -135,7 +135,6 @@ jobs:
             --platform managed \
             --region "${REGION}" \
             --service-account="${RUN_SERVICE_ACCOUNT}" \
-            --ingress internal \
             --memory 512Mi \
             --cpu 1 \
             --min-instances 0 \
